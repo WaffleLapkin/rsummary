@@ -1,5 +1,6 @@
-use std::{collections::HashMap, fmt::Write, fs, io};
+use std::{fmt::Write, fs, io};
 
+use hashbrown::HashMap;
 use xshell::{cmd, Shell};
 
 use crate::{
@@ -58,13 +59,13 @@ pub fn analyze_repo(sh: &Shell, user: &str, repo: &str) -> Result<Repo, AnalyzeR
     for (idx, merge) in repo.merges.iter().enumerate() {
         for approved_by in &merge.approved_by {
             repo.approved_by_user
-                .entry(approved_by.clone())
+                .entry_ref(approved_by)
                 .or_default()
                 .push(idx);
         }
 
         repo.authored_by_user
-            .entry(merge.author.clone())
+            .entry_ref(&merge.author)
             .or_default()
             .push(idx);
     }
@@ -86,7 +87,7 @@ impl Repo {
 
         for mc in self.authored_by(user) {
             for approved_by in &mc.approved_by {
-                grouped.entry(approved_by.clone()).or_default().push(mc);
+                grouped.entry_ref(approved_by).or_default().push(mc);
             }
         }
 
@@ -109,7 +110,7 @@ impl Repo {
         let mut grouped = HashMap::<_, Vec<_>>::new();
 
         for mc in self.approved_by(user) {
-            grouped.entry(mc.author.clone()).or_default().push(mc);
+            grouped.entry_ref(&mc.author).or_default().push(mc);
         }
 
         grouped.into_iter().collect()

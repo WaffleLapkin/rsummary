@@ -11,6 +11,7 @@ axum = "0.6.12"
 color-eyre = "0.6.2"
 derive_more = "0.99.17"
 eyre = "0.6.8"
+hashbrown = "0.13.2"
 serde = { version = "1.0.158", features = ["derive"] }
 tokio = { version = "1.26.0", features = ["rt", "macros"] }
 tracing = "0.1.37"
