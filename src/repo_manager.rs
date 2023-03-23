@@ -62,11 +62,6 @@ async fn worker(sh: Shell, mut jobs: mpsc::Receiver<Request>) {
                 _ = ret.send(Ok(Arc::clone(&cache[&repo_name].0)));
             }
             Request::Analyze { repo, ret } => {
-                // if let Err(err) =  {
-                //     _ = ret.send(Err(err));
-                //     continue;
-                // }
-
                 let res = update_repo(&sh, &repo.user, &repo.repo)
                     .and_then(|()| analyze_repo(&sh, &repo.user, &repo.repo));
 
