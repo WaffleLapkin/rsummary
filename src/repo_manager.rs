@@ -9,7 +9,7 @@ use xshell::Shell;
 
 use crate::{
     repo::{analyze_repo, update_repo, AnalyzeRepoError, Repo},
-    RepoId,
+    Inspect, RepoId,
 };
 
 #[derive(Clone)]
@@ -64,18 +64,11 @@ async fn worker(sh: Shell, mut jobs: mpsc::Receiver<Request>) {
             }
             Request::Analyze { repo_id, ret } => {
                 let res = update_repo(&sh, &repo_id.user, &repo_id.repo)
-                    .and_then(|()| analyze_repo(&sh, &repo_id.user, &repo_id.repo));
-
-                let res = match res {
-                    Ok(repo) => {
-                        let repo = Arc::new(repo);
-                        let repo2 = Arc::clone(&repo);
-
-                        cache.insert(repo_id, (repo, Instant::now()));
-                        Ok(repo2)
-                    }
-                    Err(err) => Err(err),
-                };
+                    .and_then(|()| analyze_repo(&sh, &repo_id.user, &repo_id.repo))
+                    .map(Arc::new)
+                    .inspect_(|repo| {
+                        cache.insert(repo_id, (Arc::clone(&repo), Instant::now()));
+                    });
 
                 _ = ret.send(res);
             }

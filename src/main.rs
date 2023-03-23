@@ -61,3 +61,22 @@ pub(crate) trait Also: Sized {
 }
 
 impl<T> Also for T {}
+
+pub(crate) trait Inspect {
+    type Item;
+
+    /// <https://github.com/rust-lang/rust/issues/91345> :(
+    fn inspect_(self, f: impl FnOnce(&mut Self::Item)) -> Self;
+}
+
+impl<T, E> Inspect for Result<T, E> {
+    type Item = T;
+
+    fn inspect_(mut self, f: impl FnOnce(&mut Self::Item)) -> Self {
+        if let Ok(v) = &mut self {
+            f(v);
+        }
+
+        self
+    }
+}
