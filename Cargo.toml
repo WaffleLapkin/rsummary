@@ -1,0 +1,18 @@
+[package]
+name = "rsummary"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+#axum = { version = "0.6.12", features = ["macros"] }
+axum = "0.6.12"
+color-eyre = "0.6.2"
+derive_more = "0.99.17"
+eyre = "0.6.8"
+serde = { version = "1.0.158", features = ["derive"] }
+tokio = { version = "1.26.0", features = ["rt", "macros"] }
+tracing = "0.1.37"
+tracing-subscriber = "0.3.16"
+xshell = "0.2.3"
