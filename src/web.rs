@@ -2,6 +2,7 @@ use std::{collections::HashSet, net::SocketAddr, sync::Arc};
 
 use axum::{
     extract::{Path, Query},
+    http::StatusCode,
     routing::get,
     Extension, Router,
 };
@@ -40,22 +41,37 @@ enum Filter {
 }
 
 async fn root_user_repo_get(
-    Path(repo): Path<RepoId>,
+    Path(repo_id): Path<RepoId>,
     Query(filter): Query<Filter>,
     allow_list: Extension<Arc<HashSet<RepoId>>>,
     manager: Extension<RepoManager>,
-) -> String {
-    // FIXME: print the errors in a better way/return an error HTTP code
-
-    if !allow_list.contains(&repo) {
-        return "err0".to_owned();
+) -> Result<String, (StatusCode, String)> {
+    if !allow_list.contains(&repo_id) {
+        return Err((
+            StatusCode::FORBIDDEN,
+            format!("Repository `{repo_id}` is not in the allow list"),
+        ));
     }
 
-    let Ok(repo) = manager.analyze_repo(repo).await else { return "err1".to_owned(); };
+    let repo = manager.analyze_repo(repo_id.clone()).await.map_err(|err| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Internal error while analyzing `{repo_id}`: {err:?}"),
+        )
+    })?;
 
-    match filter {
-        Filter::AuthoredBy { authored_by } => repo.print_authored_by(&authored_by),
-        Filter::ReviewedBy { approved_by } => repo.print_approved_by(&approved_by),
-    }
-    .unwrap_or_else(|| "err2".to_owned())
+    let res = match &filter {
+        Filter::AuthoredBy { authored_by } => {
+            repo.print_authored_by(authored_by).unwrap_or_else(|| {
+                format!("{authored_by} does not have any pull requests merged into `{repo_id}`")
+            })
+        }
+        Filter::ReviewedBy { approved_by } => {
+            repo.print_approved_by(approved_by).unwrap_or_else(|| {
+                format!("{approved_by} haven't approved any pull requests in `{repo_id}`")
+            })
+        }
+    };
+
+    Ok(res)
 }

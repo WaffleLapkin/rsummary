@@ -41,7 +41,10 @@ async fn main() -> eyre::Result<()> {
 /// (string) Identifier of a certain repository in GitHub.
 ///
 /// For example `rust-lang/rust` (`RepoId { user: "rust-lang", repo: "rust" }`).
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Deserialize)]
+#[derive(Debug, Clone, derive_more::Display)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(serde::Deserialize)]
+#[display(fmt = "{user}/{repo}")]
 #[serde(from = "(String, String)")]
 pub struct RepoId {
     pub user: String,
