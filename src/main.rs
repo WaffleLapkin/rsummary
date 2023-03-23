@@ -1,10 +1,11 @@
-use std::{collections::HashSet, fs, time::Duration};
+use std::fs;
 
 use eyre::Context;
 use xshell::Shell;
 
 use crate::repo_manager::RepoManager;
 
+mod config;
 mod parse;
 mod repo;
 mod repo_manager;
@@ -23,17 +24,20 @@ async fn main() -> eyre::Result<()> {
     let sh = Shell::new().wrap_err("Failed to obtain shell")?;
     sh.change_dir("./repos");
 
-    // FIXME: read to config
-    let addr = "0.0.0.0:3000".parse().unwrap();
-    let cache_timeout = Duration::from_secs(60 * 5);
-    let allow_list = HashSet::from([RepoId {
-        user: "rust-lang".to_owned(),
-        repo: "rust".to_owned(),
-    }]);
+    let config = config::config().wrap_err("Failed to obtain config")?;
 
-    let manager = RepoManager::spawn(sh, cache_timeout);
+    let allow_list = config
+        .allowed
+        .into_iter()
+        .map(|allowed| RepoId {
+            repo: allowed.repo,
+            user: allowed.user,
+        })
+        .collect();
 
-    web::run(&addr, manager, allow_list).await?;
+    let manager = RepoManager::spawn(sh, config.cache_timeout.0);
+
+    web::run(&config.addr, manager, allow_list).await?;
 
     Ok(())
 }
