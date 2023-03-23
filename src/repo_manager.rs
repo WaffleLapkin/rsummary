@@ -18,11 +18,11 @@ pub struct RepoManager {
 }
 
 impl RepoManager {
-    pub fn spawn(shell: Shell) -> Self {
+    pub fn spawn(shell: Shell, cache_timeout: Duration) -> Self {
         // FIXME: figure out channel capacity
         let (send, recv) = mpsc::channel(42);
 
-        tokio::spawn(worker(shell, recv));
+        tokio::spawn(worker(shell, cache_timeout, recv));
 
         Self { ch: send }
     }
@@ -50,7 +50,7 @@ enum Request {
     },
 }
 
-async fn worker(sh: Shell, mut jobs: mpsc::Receiver<Request>) {
+async fn worker(sh: Shell, cache_timeout: Duration, mut jobs: mpsc::Receiver<Request>) {
     let mut cache = HashMap::<RepoId, (Arc<Repo>, Instant)>::new();
 
     while let Some(job) = jobs.recv().await {
@@ -58,7 +58,7 @@ async fn worker(sh: Shell, mut jobs: mpsc::Receiver<Request>) {
             Request::Analyze { repo_id, ret }
                 if cache
                     .get(&repo_id)
-                    .map_or(false, |(_, t)| t.elapsed() < Duration::from_secs(60 * 5)) =>
+                    .map_or(false, |(_, t)| t.elapsed() < cache_timeout) =>
             {
                 _ = ret.send(Ok(Arc::clone(&cache[&repo_id].0)));
             }

@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fs};
+use std::{collections::HashSet, fs, time::Duration};
 
 use eyre::Context;
 use xshell::Shell;
@@ -25,12 +25,13 @@ async fn main() -> eyre::Result<()> {
 
     // FIXME: read to config
     let addr = "0.0.0.0:3000".parse().unwrap();
-
-    let manager = RepoManager::spawn(sh);
+    let cache_timeout = Duration::from_secs(60 * 5);
     let allow_list = HashSet::from([RepoId {
         user: "rust-lang".to_owned(),
         repo: "rust".to_owned(),
     }]);
+
+    let manager = RepoManager::spawn(sh, cache_timeout);
 
     web::run(&addr, manager, allow_list).await?;
 
