@@ -6,14 +6,14 @@ use axum::{
     Extension, Router,
 };
 
-use crate::{repo_manager::RepoManager, FullRepoName};
+use crate::{repo_manager::RepoManager, RepoId};
 
 use eyre::WrapErr;
 
 pub async fn run(
     addr: &SocketAddr,
     manager: RepoManager,
-    allow_list: HashSet<FullRepoName>,
+    allow_list: HashSet<RepoId>,
 ) -> eyre::Result<()> {
     let router = Router::new()
         .route("/:user/:repo", get(root_user_repo_get))
@@ -40,9 +40,9 @@ enum Filter {
 }
 
 async fn root_user_repo_get(
-    Path(repo): Path<FullRepoName>,
+    Path(repo): Path<RepoId>,
     Query(filter): Query<Filter>,
-    allow_list: Extension<Arc<HashSet<FullRepoName>>>,
+    allow_list: Extension<Arc<HashSet<RepoId>>>,
     manager: Extension<RepoManager>,
 ) -> String {
     // FIXME: print the errors in a better way/return an error HTTP code

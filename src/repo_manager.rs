@@ -9,7 +9,7 @@ use xshell::Shell;
 
 use crate::{
     repo::{analyze_repo, update_repo, AnalyzeRepoError, Repo},
-    FullRepoName,
+    RepoId,
 };
 
 #[derive(Clone)]
@@ -27,11 +27,14 @@ impl RepoManager {
         Self { ch: send }
     }
 
-    pub async fn analyze_repo(&self, repo: FullRepoName) -> Result<Arc<Repo>, AnalyzeRepoError> {
+    pub async fn analyze_repo(&self, repo: RepoId) -> Result<Arc<Repo>, AnalyzeRepoError> {
         let (send, recv) = oneshot::channel();
 
         self.ch
-            .send(Request::Analyze { repo, ret: send })
+            .send(Request::Analyze {
+                repo_id: repo,
+                ret: send,
+            })
             .await
             .ok()
             .expect("The worker died");
@@ -42,36 +45,34 @@ impl RepoManager {
 
 enum Request {
     Analyze {
-        repo: FullRepoName,
+        repo_id: RepoId,
         ret: oneshot::Sender<Result<Arc<Repo>, AnalyzeRepoError>>,
     },
 }
 
 async fn worker(sh: Shell, mut jobs: mpsc::Receiver<Request>) {
-    let mut cache = HashMap::<FullRepoName, (Arc<Repo>, Instant)>::new();
+    let mut cache = HashMap::<RepoId, (Arc<Repo>, Instant)>::new();
 
     while let Some(job) = jobs.recv().await {
         match job {
-            Request::Analyze {
-                repo: repo_name,
-                ret,
-            } if cache
-                .get(&repo_name)
-                .map_or(false, |(_, t)| t.elapsed() < Duration::from_secs(60 * 5)) =>
+            Request::Analyze { repo_id, ret }
+                if cache
+                    .get(&repo_id)
+                    .map_or(false, |(_, t)| t.elapsed() < Duration::from_secs(60 * 5)) =>
             {
-                _ = ret.send(Ok(Arc::clone(&cache[&repo_name].0)));
+                _ = ret.send(Ok(Arc::clone(&cache[&repo_id].0)));
             }
-            Request::Analyze { repo, ret } => {
-                let res = update_repo(&sh, &repo.user, &repo.repo)
-                    .and_then(|()| analyze_repo(&sh, &repo.user, &repo.repo));
+            Request::Analyze { repo_id, ret } => {
+                let res = update_repo(&sh, &repo_id.user, &repo_id.repo)
+                    .and_then(|()| analyze_repo(&sh, &repo_id.user, &repo_id.repo));
 
                 let res = match res {
-                    Ok(res) => {
-                        let res = Arc::new(res);
-                        let res2 = Arc::clone(&res);
+                    Ok(repo) => {
+                        let repo = Arc::new(repo);
+                        let repo2 = Arc::clone(&repo);
 
-                        cache.insert(repo, (res, Instant::now()));
-                        Ok(res2)
+                        cache.insert(repo_id, (repo, Instant::now()));
+                        Ok(repo2)
                     }
                     Err(err) => Err(err),
                 };

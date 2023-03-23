@@ -27,7 +27,7 @@ async fn main() -> eyre::Result<()> {
     let addr = "0.0.0.0:3000".parse().unwrap();
 
     let manager = RepoManager::spawn(sh);
-    let allow_list = HashSet::from([FullRepoName {
+    let allow_list = HashSet::from([RepoId {
         user: "rust-lang".to_owned(),
         repo: "rust".to_owned(),
     }]);
@@ -37,14 +37,17 @@ async fn main() -> eyre::Result<()> {
     Ok(())
 }
 
+/// (string) Identifier of a certain repository in GitHub.
+///
+/// For example `rust-lang/rust` (`RepoId { user: "rust-lang", repo: "rust" }`).
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Deserialize)]
 #[serde(from = "(String, String)")]
-pub struct FullRepoName {
+pub struct RepoId {
     pub user: String,
     pub repo: String,
 }
 
-impl From<(String, String)> for FullRepoName {
+impl From<(String, String)> for RepoId {
     fn from((user, repo): (String, String)) -> Self {
         Self { user, repo }
     }
