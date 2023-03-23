@@ -17,6 +17,8 @@ tokio = { version = "1.26.0", features = ["rt", "macros"] }
 tracing = "0.1.37"
 tracing-subscriber = "0.3.16"
 xshell = "0.2.3"
+dirs = "4.0.0"
+knuffel = "2.0.0"
 
 # The profile that 'cargo dist' will build with
 [profile.dist]
