@@ -20,6 +20,8 @@ pub async fn run(
         .layer(Extension(Arc::new(allow_list)))
         .layer(Extension(manager));
 
+    tracing::info!("Starting web server 💃");
+
     axum::Server::bind(addr)
         .serve(router.into_make_service())
         .await
